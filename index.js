@@ -59,17 +59,17 @@ function webos3Accessory(log, config, api) {
     .getCharacteristic(Characteristic.On)
     .on('get', this.getState.bind(this))
     .on('set', this.setState.bind(this));
-  
-   this.volumeService
-    .getCharacteristic(Characteristic.On)
+    
+  this.volumeService = new Service.Speaker("Speaker");
+  volumeService
+    .getCharacteristic(Characteristic.Mute)
     .on('get', this.getMuteState.bind(this))
     .on('set', this.setMuteState.bind(this));
-  
-  this.volumeService
-     .addCharacteristic(new Characteristic.Brightness())
-     .on('get', this.getVolume.bind(this))
-     .on('set', this.setVolume.bind(this));
-  
+    
+  volumeService
+    .getCharacteristic(Characteristic.Volume)
+    .on('get', this.getVolume.bind(this))
+    .on('set', this.setVolume.bind(this));
 }
 
 webos3Accessory.prototype.getState = function(callback) {
