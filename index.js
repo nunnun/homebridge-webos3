@@ -66,10 +66,15 @@ function webos3Accessory(log, config, api) {
     .on('get', this.getMuteState.bind(this))
     .on('set', this.setMuteState.bind(this));
     
-  this.volumeService
-    .getCharacteristic(Characteristic.Volume)
-    .on('get', this.getVolume.bind(this))
-    .on('set', this.setVolume.bind(this));
+  this.increaseVolumeSwitchService = new Service.StatelessProgrammableSwitch("Increase Volume","Increase");
+  this.increaseVolumeSwitchService
+    .getCharacteristic(Characteristic.ProgrammableSwitchEvent)
+    .on('set', this.increaseVolumeState.bind(this));
+    
+  this.decreaseVolumeSwitchService = new Service.StatelessProgrammableSwitch("Decrease Volume", "Decrease");
+  this.decreaseVolumeSwitchService
+    .getCharacteristic(Characteristic.ProgrammableSwitchEvent)
+    .on('set', this.decreaseVolumeState.bind(this));
 }
 
 webos3Accessory.prototype.getState = function(callback) {
@@ -149,9 +154,19 @@ webos3Accessory.prototype.setVolume = function(level, callback) {
     return callback(null, level);
 }
 
+webos3Accessory.prototype.increaseVolumeState = function(callback) {
+    this.log("increaseVolumeState to be implemented");
+}
+
+webos3Accessory.prototype.decreaseVolumeState = function(callback) {
+    this.log("decreaseVolumeState to be implemented");
+}
+
 webos3Accessory.prototype.getServices = function() {
   return [
     this.service,
-    this.volumeService
+    this.volumeService,
+    this.increaseVolumeSwitchService,
+    this.decreaseVolumeSwitchService
   ]
 }
