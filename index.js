@@ -61,12 +61,12 @@ function webos3Accessory(log, config, api) {
     .on('set', this.setState.bind(this));
     
   this.volumeService = new Service.Speaker("Speaker");
-  volumeService
+  this.volumeService
     .getCharacteristic(Characteristic.Mute)
     .on('get', this.getMuteState.bind(this))
     .on('set', this.setMuteState.bind(this));
     
-  volumeService
+  this.volumeService
     .getCharacteristic(Characteristic.Volume)
     .on('get', this.getVolume.bind(this))
     .on('set', this.setVolume.bind(this));
