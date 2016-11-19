@@ -25,32 +25,6 @@ function webos3Accessory(log, config, api) {
   });
   
   var self = this;
-  
-  lgtv.on('connect', function() {
-    self.log('webOS3 connected to TV');
-    self.connected = true;
-  });
-  
-  lgtv.on('close', function() {
-    self.log('webOS3 disconnected from TV');
-    self.connected = false;
-  });
-  
-  lgtv.on('error', function(error) {
-    self.log('webOS3 error %s', error);
-    self.connected = false;
-    //setTimeout(lgtv.connect(this.url), 5000);
-  });
-  
-  lgtv.on('prompt', function() {
-    self.log('webOS3 prompt for confirmation');
-    self.connected = false;
-  });
-  
-  lgtv.on('connecting', function() {
-    self.log('webOS3 connecting to TV');
-    self.connected = false;
-  });
 
   this.service = new Service.Switch(this.name, "powerService");
   this.volumeService = new Service.Lightbulb(this.name, "volumeService");
@@ -66,15 +40,71 @@ function webos3Accessory(log, config, api) {
     .on('get', this.getMuteState.bind(this))
     .on('set', this.setMuteState.bind(this));
     
-  this.increaseVolumeSwitchService = new Service.StatelessProgrammableSwitch("Increase Volume","Increase");
-  this.increaseVolumeSwitchService
-    .getCharacteristic(Characteristic.ProgrammableSwitchEvent)
-    .on('set', this.increaseVolumeState.bind(this));
+  this.volumeService
+    .getCharacteristic(Characteristic.Volume)
+    .on('get', this.getVolume.bind(this))
+    .on('set', this.setVolume.bind(this));
     
-  this.decreaseVolumeSwitchService = new Service.StatelessProgrammableSwitch("Decrease Volume", "Decrease");
-  this.decreaseVolumeSwitchService
+  this.volumeUpSwitchService = new Service.StatelessProgrammableSwitch("Volume Up","Increase");
+  this.volumeUpSwitchService
     .getCharacteristic(Characteristic.ProgrammableSwitchEvent)
-    .on('set', this.decreaseVolumeState.bind(this));
+    .on('set', this.volumeUpState.bind(this));
+    
+  this.volumeDownSwitchService = new Service.StatelessProgrammableSwitch("Volume Down", "Decrease");
+  this.volumeDownSwitchService
+    .getCharacteristic(Characteristic.ProgrammableSwitchEvent)
+    .on('set', this.volumeDownState.bind(this));
+    
+  lgtv.on('connect', function() {
+    self.log('webOS3 connected to TV');
+    self.connected = true;
+          
+    lgtv.subscribe('ssap://audio/getVolume', function (err, res) {
+      if (!err && res.changed.indexOf('volume') !== -1) {
+        self.log('volume changed', res.volume);
+        var volChar = self.volumeService.getCharacteristic(Characteristic.Volume);
+                   
+        var oldVol = volChar.value;
+        self.log('oldVol = ' + oldVol);
+        if(res.volume > oldVol) {
+          self.log('Triggering volumeUp');
+          self.volumeUpSwitchService.getCharacteristic(Characteristic.ProgrammableSwitchEvent).setValue(1);
+        }
+        else if(res.volume < oldVol) {
+          self.log('Triggering volumeDown');
+          self.volumeDownSwitchService.getCharacteristic(Characteristic.ProgrammableSwitchEvent).setValue(1);
+        }
+                   
+        volChar.setValue(res.volume);
+      }
+      if (!err && res.changed.indexOf('muted') !== -1) {
+        self.log('mute changed', res.muted);
+        self.volumeService.getCharacteristic(Characteristic.Mute).setValue(res.muted);
+      }
+    }.bind(self));
+  });
+    
+  lgtv.on('close', function() {
+    self.log('webOS3 disconnected from TV');
+    self.connected = false;
+  });
+    
+  lgtv.on('error', function(error) {
+    self.log('webOS3 error %s', error);
+    self.connected = false;
+    //setTimeout(lgtv.connect(this.url), 5000);
+  });
+    
+  lgtv.on('prompt', function() {
+    self.log('webOS3 prompt for confirmation');
+    self.connected = false;
+  });
+    
+  lgtv.on('connecting', function() {
+    self.log('webOS3 connecting to TV');
+    self.connected = false;
+  });
+
 }
 
 webos3Accessory.prototype.getState = function(callback) {
@@ -154,19 +184,31 @@ webos3Accessory.prototype.setVolume = function(level, callback) {
     return callback(null, level);
 }
 
-webos3Accessory.prototype.increaseVolumeState = function(callback) {
-    this.log("increaseVolumeState to be implemented");
+webos3Accessory.prototype.volumeUpState = function(callback) {
+    this.log("volumeUpState is not connected");
+//    var self = this;
+//    lgtv.request('ssap://audio/volumeUp', function (err, res) {
+//        if (!res) return callback(null, false);
+//        self.log('webOS3 TV volume up');
+//        callback(null, 1);
+//    });
 }
 
-webos3Accessory.prototype.decreaseVolumeState = function(callback) {
-    this.log("decreaseVolumeState to be implemented");
+webos3Accessory.prototype.volumeDownState = function(callback) {
+    this.log("volumeDownState is not connected");
+//    var self = this;
+//    lgtv.request('ssap://audio/volumeDown', function (err, res) {
+//        if (!res) return callback(null, false);
+//        self.log('webOS3 TV volume down');
+//        callback(null, 1);
+//    });
 }
 
 webos3Accessory.prototype.getServices = function() {
   return [
     this.service,
     this.volumeService,
-    this.increaseVolumeSwitchService,
-    this.decreaseVolumeSwitchService
+    this.volumeUpSwitchService,
+    this.volumeDownSwitchService
   ]
 }
