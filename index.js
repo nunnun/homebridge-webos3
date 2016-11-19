@@ -60,10 +60,10 @@ function webos3Accessory(log, config, api) {
     self.connected = true;
           
     lgtv.subscribe('ssap://audio/getVolume', function (err, res) {
+      var volChar = self.volumeService.getCharacteristic(Characteristic.Volume);
+                   
       if (!err && res.changed.indexOf('volume') !== -1) {
         self.log('volume changed', res.volume);
-        var volChar = self.volumeService.getCharacteristic(Characteristic.Volume);
-                   
         var oldVol = volChar.value;
         self.log('oldVol = ' + oldVol);
         if(res.volume > oldVol) {
@@ -160,13 +160,13 @@ webos3Accessory.prototype.getMuteState = function(callback) {
     var self = this;
     lgtv.request('ssap://audio/getStatus', function (err, res) {
       if (!res) return callback(null, false);
-      self.log('webOS3 TV muted: %s', res.mute ? "Yes" : "No");   
-      callback(null, !res.mute);
+      self.log('webOS3 TV muted: %s', res.mute ? "Yes" : "No");
+      callback(null, res.mute);
     });
 }
 
 webos3Accessory.prototype.setMuteState = function(state, callback) {
-    lgtv.request('ssap://audio/setMute', {mute: !state});  
+    lgtv.request('ssap://audio/setMute', {mute: state});
     return callback(null, true);
 }
 
