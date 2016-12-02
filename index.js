@@ -16,6 +16,8 @@ function webos3Accessory(log, config, api) {
   this.url = 'ws://' + this.ip + ':3000';
   this.connected = false;
   this.checkCount = 0;
+  this.foregroundApp = -1;
+  this.appIds = [];
 
   lgtv = require('lgtv2')({
     url: this.url,
@@ -50,9 +52,44 @@ function webos3Accessory(log, config, api) {
   //  .getCharacteristic(Characteristic.ProgrammableSwitchOutputState)
   //  .on('set', this.volumeUpDownState.bind(this));
     
+  makeHSourceCharacteristic();
+    
+  this.service
+    .addCharacteristic(SourceCharacteristic)
+    .on('get', this.getSourcePort.bind(this))
+    .on('set', this.setSourcePort.bind(this));
+    
   lgtv.on('connect', function() {
     self.log('webOS3 connected to TV');
     self.connected = true;
+          
+    lgtv.request('ssap://com.webos.applicationManager/listLaunchPoints', function (err, res) {
+        self.appIds = [];
+        var launchPoints = res.launchPoints;
+        var launchPoint;
+        for(launchPoint in launchPoints){
+            self.appIds.push(launchPoints[launchPoint].id);
+        }
+        //self.log(self.appIds);
+    }.bind(self));
+          
+    lgtv.subscribe('ssap://com.webos.applicationManager/getForegroundAppInfo', function (err, res) {
+        var onChar = self.service.getCharacteristic(Characteristic.On);
+        if(res.appId == "") {
+            self.log('Turned off TV');
+            self.foregroundApp = -1;
+            onChar.setValue(false);
+        }
+        else {
+            self.foregroundApp = self.appIds.indexOf(res.appId);
+            self.log("switched to " + self.foregroundApp + " " + res.appId);
+            if(self.foregroundApp >= 0) {
+                if(onChar.getValue() === false) onChar.setValue(true);
+                var sourceChar = self.service.getCharacteristic(SourceCharacteristic);
+                sourceChar.setValue(self.foregroundApp);
+            }
+        }
+    }.bind(self));
           
     lgtv.subscribe('ssap://audio/getVolume', function (err, res) {
       var volChar = self.volumeService.getCharacteristic(Characteristic.Volume);
@@ -106,8 +143,8 @@ function webos3Accessory(log, config, api) {
 }
 
 webos3Accessory.prototype.getState = function(callback) {
-  this.log('webOS3 TV state: %s', this.connected ? "On" : "Off");
-  return callback(null, this.connected);
+  this.log('webOS3 TV state: %s', this.foregroundApp >= 0 ? "On" : "Off");
+  return callback(null, this.foregroundApp >= 0);
 }
 
 webos3Accessory.prototype.checkWakeOnLan = function(callback) {
@@ -193,6 +230,36 @@ webos3Accessory.prototype.setVolume = function(level, callback) {
 //    callback(null, value);
 //}
 
+webos3Accessory.prototype.getSourcePort = function(callback) {
+    var self = this;
+    lgtv.request('ssap://com.webos.applicationManager/getForegroundAppInfo', function (err, res) {
+        if (!res) {
+            callback(null, 0);
+        }
+        else {
+            self.log('webOS3 getSourcePort: ' + res.appId);
+                 
+            var source = 0;
+            if(res.appId == "") {
+                self.log('Turned off TV');
+            }
+            else {
+                source = self.appIds.indexOf(res.appId);
+                self.log(source);
+            }
+            callback(null, source);
+        }
+    }.bind(this));
+}
+
+webos3Accessory.prototype.setSourcePort = function(port, callback) {
+    var self = this;
+    var app = self.appIds[port];
+    self.log('ssap://system.launcher/launch' + '{id: ' + app + '}');
+    if(app && app != "") lgtv.request('ssap://system.launcher/launch', {id: app});
+    callback();
+}
+
 
 webos3Accessory.prototype.getServices = function() {
   return [
@@ -200,4 +267,23 @@ webos3Accessory.prototype.getServices = function() {
     this.volumeService,
     this.volumeUpDownSwitchService
   ]
+}
+
+function makeHSourceCharacteristic() {
+    
+    SourceCharacteristic = function () {
+        Characteristic.call(this, 'Source', '212131F4-2E14-4FF4-AE13-C97C3232498E');
+        this.setProps({
+                      format: Characteristic.Formats.INT,
+                      unit: Characteristic.Units.NONE,
+                      maxValue: 40,
+                      minValue: 0,
+                      minStep: 1,
+                      perms: [Characteristic.Perms.READ, Characteristic.Perms.WRITE, Characteristic.Perms.NOTIFY]
+                      });
+        this.value = this.getDefaultValue();
+    };
+    
+    var inherits = require('util').inherits;
+    inherits(SourceCharacteristic, Characteristic);
 }
