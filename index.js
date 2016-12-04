@@ -193,30 +193,56 @@ webos3Accessory.prototype.setState = function(state, callback) {
 
 webos3Accessory.prototype.getMuteState = function(callback) {
     var self = this;
-    lgtv.request('ssap://audio/getStatus', function (err, res) {
-      if (!res) return callback(null, false);
-      self.log('webOS3 TV muted: %s', res.mute ? "Yes" : "No");
-      callback(null, res.mute);
-    });
+    if (self.connected) {
+      lgtv.request('ssap://audio/getStatus', function (err, res) {
+        if (!res || err){
+          self.connected = false ;
+          lgtv.disconnect();
+          return callback(null, false);
+        }
+        self.log('webOS3 TV muted: %s', res.mute ? "Yes" : "No");   
+        callback(null, !res.mute);
+      });
+    }else{
+      callback(null, false);
+    }
 }
 
 webos3Accessory.prototype.setMuteState = function(state, callback) {
-    lgtv.request('ssap://audio/setMute', {mute: state});
-    return callback(null, true);
+    var self = this;
+    if (self.connected) {
+      lgtv.request('ssap://audio/setMute', {mute: !state});  
+      return callback(null, true);
+    }else {
+      return callback(new Error('webOS3 is not connected'))
+    }
 }
 
 webos3Accessory.prototype.getVolume = function(callback) {
     var self = this;
-    lgtv.request('ssap://audio/getVolume', function (err, res) {
-      if (!res) return callback(null, false);
-      self.log('webOS3 TV volume: ' + res.volume);   
-      callback(null, parseInt(res.volume));
-    });
+    if (self.connected) {
+      lgtv.request('ssap://audio/getVolume', function (err, res) {
+        if (!res || err){
+          self.connected = false ;
+          lgtv.disconnect();
+          return callback(null, false);
+        }
+        self.log('webOS3 TV volume: ' + res.volume);   
+        callback(null, parseInt(res.volume));
+      });
+    }else{
+      callback(null, false);
+    }
 }
 
 webos3Accessory.prototype.setVolume = function(level, callback) {
-    lgtv.request('ssap://audio/setVolume', {volume: level});  
-    return callback(null, level);
+    var self = this;
+    if (self.connected) {
+      lgtv.request('ssap://audio/setVolume', {volume: level});  
+      return callback(null, level);
+     }else {
+      return callback(new Error('webOS3 is not connected'))
+    }
 }
 
 //webos3Accessory.prototype.volumeUpDownState = function(value, callback) {
@@ -232,32 +258,40 @@ webos3Accessory.prototype.setVolume = function(level, callback) {
 
 webos3Accessory.prototype.getSourcePort = function(callback) {
     var self = this;
-    lgtv.request('ssap://com.webos.applicationManager/getForegroundAppInfo', function (err, res) {
-        if (!res) {
-            callback(null, 0);
-        }
-        else {
-            self.log('webOS3 getSourcePort: ' + res.appId);
-                 
-            var source = 0;
-            if(res.appId == "") {
-                self.log('Turned off TV');
+    if (self.connected) {
+        lgtv.request('ssap://com.webos.applicationManager/getForegroundAppInfo', function (err, res) {
+            if (!res) {
+                callback(null, 0);
             }
             else {
-                source = self.appIds.indexOf(res.appId);
-                self.log(source);
+                self.log('webOS3 getSourcePort: ' + res.appId);
+                 
+                var source = 0;
+                if(res.appId == "") {
+                     self.log('Turned off TV');
+                }
+                else {
+                     source = self.appIds.indexOf(res.appId);
+                     self.log(source);
+                }
+                callback(null, source);
             }
-            callback(null, source);
-        }
-    }.bind(this));
+        }.bind(this));
+    }else {
+        callback(null, 0);
+    }
 }
 
 webos3Accessory.prototype.setSourcePort = function(port, callback) {
     var self = this;
-    var app = self.appIds[port];
-    self.log('ssap://system.launcher/launch' + '{id: ' + app + '}');
-    if(app && app != "") lgtv.request('ssap://system.launcher/launch', {id: app});
-    callback();
+    if (self.connected) {
+        var app = self.appIds[port];
+        self.log('ssap://system.launcher/launch' + '{id: ' + app + '}');
+        if(app && app != "") lgtv.request('ssap://system.launcher/launch', {id: app});
+        return callback();
+    }else {
+        return callback(new Error('webOS3 is not connected'))
+    }
 }
 
 
