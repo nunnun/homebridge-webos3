@@ -78,13 +78,13 @@ function webos3Accessory(log, config, api) {
         if(res.appId == "") {
             self.log('Turned off TV');
             self.foregroundApp = -1;
-            onChar.setValue(false);
+            if(onChar.getValue() == true) onChar.setValue(false);
         }
         else {
             self.foregroundApp = self.appIds.indexOf(res.appId);
             self.log("switched to " + self.foregroundApp + " " + res.appId);
             if(self.foregroundApp >= 0) {
-                if(onChar.getValue() === false) onChar.setValue(true);
+                if(onChar.getValue() == false) onChar.setValue(true);
                 var sourceChar = self.service.getCharacteristic(SourceCharacteristic);
                 sourceChar.setValue(self.foregroundApp);
             }
@@ -110,11 +110,12 @@ function webos3Accessory(log, config, api) {
           //setTimeout(function(){targetChar.setValue(0);}, 10);
         }
                    
-        volChar.setValue(res.volume);
+        if(volChar.getValue() != res.volume)volChar.setValue(res.volume);
       }
       if (!err && res.changed.indexOf('muted') !== -1) {
         self.log('mute changed', res.muted);
-        self.volumeService.getCharacteristic(Characteristic.Mute).setValue(res.muted);
+        var muteChar = self.volumeService.getCharacteristic(Characteristic.Mute);
+        if(muteChar.getValue() != res.muted) muteChar.setValue(res.muted);
       }
     }.bind(self));
   });
@@ -201,7 +202,7 @@ webos3Accessory.prototype.getMuteState = function(callback) {
           return callback(null, false);
         }
         self.log('webOS3 TV muted: %s', res.mute ? "Yes" : "No");   
-        callback(null, !res.mute);
+        callback(null, res.mute);
       });
     }else{
       callback(null, false);
@@ -211,7 +212,7 @@ webos3Accessory.prototype.getMuteState = function(callback) {
 webos3Accessory.prototype.setMuteState = function(state, callback) {
     var self = this;
     if (self.connected) {
-      lgtv.request('ssap://audio/setMute', {mute: !state});  
+      lgtv.request('ssap://audio/setMute', {mute: state});
       return callback(null, true);
     }else {
       return callback(new Error('webOS3 is not connected'))
@@ -260,7 +261,7 @@ webos3Accessory.prototype.getSourcePort = function(callback) {
     var self = this;
     if (self.connected) {
         lgtv.request('ssap://com.webos.applicationManager/getForegroundAppInfo', function (err, res) {
-            if (!res) {
+            if (!res || err) {
                 callback(null, 0);
             }
             else {
