@@ -78,15 +78,15 @@ function webos3Accessory(log, config, api) {
         if(res.appId == "") {
             self.log('Turned off TV');
             self.foregroundApp = -1;
-            if(onChar.getValue() == true) onChar.setValue(false);
+            if(onChar.getValue() == true) onChar.updateValue(false);
         }
         else {
             self.foregroundApp = self.appIds.indexOf(res.appId);
             self.log("switched to " + self.foregroundApp + " " + res.appId);
             if(self.foregroundApp >= 0) {
-                if(onChar.getValue() == false) onChar.setValue(true);
+                if(onChar.getValue() == false) onChar.updateValue(true);
                 var sourceChar = self.service.getCharacteristic(SourceCharacteristic);
-                sourceChar.setValue(self.foregroundApp);
+                sourceChar.updateValue(self.foregroundApp);
             }
         }
     }.bind(self));
@@ -101,21 +101,21 @@ function webos3Accessory(log, config, api) {
         self.log('oldVol = ' + oldVol);
         if(res.volume > oldVol) {
           self.log('Triggering volumeUp');
-          targetChar.setValue(1);
+          targetChar.updateValue(1);
           //setTimeout(function(){targetChar.setValue(0);}, 10);
         }
         else if(res.volume < oldVol) {
           self.log('Triggering volumeDown');
-          targetChar.setValue(0);
+          targetChar.updateValue(0);
           //setTimeout(function(){targetChar.setValue(0);}, 10);
         }
                    
-        if(volChar.getValue() != res.volume)volChar.setValue(res.volume);
+        if(volChar.getValue() != res.volume)volChar.updateValue(res.volume);
       }
       if (!err && res.changed.indexOf('muted') !== -1) {
         self.log('mute changed', res.muted);
         var muteChar = self.volumeService.getCharacteristic(Characteristic.Mute);
-        if(muteChar.getValue() != res.muted) muteChar.setValue(res.muted);
+        if(muteChar.getValue() != res.muted) muteChar.updateValue(res.muted);
       }
     }.bind(self));
   });
@@ -202,7 +202,7 @@ webos3Accessory.prototype.getMuteState = function(callback) {
           return callback(null, false);
         }
         self.log('webOS3 TV muted: %s', res.mute ? "Yes" : "No");   
-        callback(null, res.mute);
+        callback(null, finderres.mute);
       });
     }else{
       callback(null, false);
