@@ -202,7 +202,7 @@ webos3Accessory.prototype.getMuteState = function(callback) {
           return callback(null, false);
         }
         self.log('webOS3 TV muted: %s', res.mute ? "Yes" : "No");   
-        callback(null, finderres.mute);
+        callback(null, res.mute);
       });
     }else{
       callback(null, false);
